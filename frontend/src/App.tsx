@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   generateDinosaurName,
   generateDinosaurImage,
   getDinosaurImageStream,
-  DinosaurName,
+  type DinosaurName,
 } from "./api";
 import "./App.css";
 
@@ -32,9 +32,11 @@ function App() {
     try {
       const nameData = await generateDinosaurName();
       setAutoDinosaur(nameData);
+      
+      const dino =  nameData.dinosaurs[0]
 
-      const imageData = await generateDinosaurImage(nameData.name);
-      setAutoImage(imageData.url);
+      const imageData = await generateDinosaurImage(dino.name, dino.features);
+      setAutoImage(imageData.image_base64);
     } catch (error) {
       setErrorAuto(
         error instanceof Error
@@ -86,13 +88,17 @@ function App() {
 
         {autoDinosaur && (
           <div className="result">
-            <h3>{autoDinosaur.name}</h3>
-            <p>{autoDinosaur.description}</p>
+            <h3>{autoDinosaur.dinosaurs[0].name}</h3>
+            <p>{autoDinosaur.dinosaurs[0].features}</p>
           </div>
         )}
         {autoImage && (
           <div className="image-container">
-            <img src={autoImage} alt={autoDinosaur?.name} className="dino-image" />
+            <img 
+              src={`data:image/png;base64,${autoImage}`} 
+              alt="Generated dinosaur" 
+              className="dino-image" 
+            />
           </div>
         )}
       </div>
@@ -120,7 +126,11 @@ function App() {
 
         {manualImage && (
           <div className="image-container">
-            <img src={manualImage} alt={manualName} className="dino-image" />
+            <img 
+              src={`data:image/png;base64,${manualImage}`} 
+              alt="Generated dinosaur" 
+              className="dino-image" 
+            />
           </div>
         )}
       </div>
