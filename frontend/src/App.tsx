@@ -3,9 +3,24 @@ import {
   generateDinosaurName,
   generateDinosaurImage,
   getDinosaurImageStream,
+  getModelInfo,
   type DinosaurName,
+  type ModelInfoResponse,
 } from "./api";
 import "./App.css";
+
+const TOP_DINOSAURS = [
+  { name: "Neuquenraptor", score: 14, temp: 0.7 },
+  { name: "Bonapartesaurus", score: 14, temp: 0.7 },
+  { name: "Diabloceratops", score: 14, temp: 0.7 },
+  { name: "Serinosaurus", score: 14, temp: 0.7 },
+  { name: "Apatodon", score: 14, temp: 0.7 },
+  { name: "Europasaurus", score: 14, temp: 0.7 },
+  { name: "Centrosaurus", score: 14, temp: 0.7 },
+  { name: "Barrosasaurus", score: 14, temp: 0.7 },
+  { name: "Sauroposeidon", score: 14, temp: 0.7 },
+  { name: "Leptoceratops", score: 14, temp: 0.7 },
+];
 
 function App() {
   // Estado para la generación automática
@@ -19,6 +34,16 @@ function App() {
   const [manualImage, setManualImage] = useState<string | null>(null);
   const [isLoadingManual, setIsLoadingManual] = useState<boolean>(false);
   const [errorManual, setErrorManual] = useState<string | null>(null);
+
+  // Nuevo estado para info del modelo
+  const [modelInfo, setModelInfo] = useState<ModelInfoResponse | null>(null);
+  const [isLoadingModelInfo, setIsLoadingModelInfo] = useState<boolean>(false);
+  const [errorModelInfo, setErrorModelInfo] = useState<string | null>(null);
+
+  // Add these new states
+  const [topImages, setTopImages] = useState<Record<string, string>>({});
+  const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>({});
+  const [errorImages, setErrorImages] = useState<Record<string, string>>({});
 
   /**
    * Maneja la generación automática de un dinosaurio.
@@ -66,6 +91,42 @@ function App() {
       setManualImage(getDinosaurImageStream(manualName));
       setIsLoadingManual(false);
     }, 1000); // Pequeño delay para simular la carga
+  };
+
+  const handleFetchModelInfo = async () => {
+    setIsLoadingModelInfo(true);
+    setErrorModelInfo(null);
+    setModelInfo(null);
+    try {
+      const info = await getModelInfo();
+      setModelInfo(info);
+    } catch (err) {
+      setErrorModelInfo(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setIsLoadingModelInfo(false);
+    }
+  };
+
+  // Add this new function
+  const handleGenerateTopImages = async (dinoName: string) => {
+    setLoadingImages(prev => ({ ...prev, [dinoName]: true }));
+    setErrorImages(prev => ({ ...prev, [dinoName]: '' }));
+
+    try {
+      const imageData = await generateDinosaurImage(dinoName, 
+        `A detailed description of a ${dinoName}, a unique dinosaur species`);
+      setTopImages(prev => ({
+        ...prev,
+        [dinoName]: imageData.image_base64
+      }));
+    } catch (error) {
+      setErrorImages(prev => ({
+        ...prev,
+        [dinoName]: error instanceof Error ? error.message : "Error generating image"
+      }));
+    } finally {
+      setLoadingImages(prev => ({ ...prev, [dinoName]: false }));
+    }
   };
 
   return (
@@ -133,6 +194,164 @@ function App() {
             />
           </div>
         )}
+      </div>
+
+      {/* Sección: Información del modelo */}
+      <div className="section">
+        <h2>Info del Modelo</h2>
+        <button onClick={handleFetchModelInfo} disabled={isLoadingModelInfo} className="button">
+          {isLoadingModelInfo ? "Cargando..." : "Obtener Info del Modelo"}
+        </button>
+
+        {isLoadingModelInfo && <p className="loading">Consultando modelo...</p>}
+        {errorModelInfo && <p className="error">{errorModelInfo}</p>}
+
+        {modelInfo && (
+          <div className="result">
+            <h3>{modelInfo.model_name}</h3>
+            <p>Tipo: {modelInfo.model_type}</p>
+
+            {/* Mostrar algunos campos importantes si existen */}
+            {modelInfo.architecture?.total_params && (
+              <p>Parámetros totales: {modelInfo.architecture.total_params}</p>
+            )}
+            {modelInfo.vocabulary && (
+              <p>Vocab size: {modelInfo.vocabulary.size ?? "N/A"}</p>
+            )}
+
+            {/* Fallback: mostrar JSON legible */}
+            <details style={{ marginTop: 8 }}>
+              <summary>Mostrar JSON completo</summary>
+              <pre style={{ maxHeight: 280, overflow: "auto" }}>
+                {JSON.stringify(modelInfo, null, 2)}
+              </pre>
+            </details>
+          </div>
+        )}
+      </div>
+      {modelInfo && (
+      <div className="model-info-container">
+        <div className="model-header">
+          <h3>{modelInfo.model_name}</h3>
+          <span className="model-type-badge">{modelInfo.model_type}</span>
+        </div>
+
+        <div className="model-stats-grid">
+          {modelInfo.architecture?.total_params && (
+            <div className="stat-card">
+              <span className="stat-label">Total Parámetros</span>
+              <span className="stat-value">
+                {Number(modelInfo.architecture.total_params).toLocaleString()}
+              </span>
+            </div>
+          )}
+          
+          {modelInfo.vocabulary?.size && (
+            <div className="stat-card">
+              <span className="stat-label">Tamaño del Vocabulario</span>
+              <span className="stat-value">
+                {Number(modelInfo.vocabulary.size).toLocaleString()}
+              </span>
+            </div>
+          )}
+
+          {modelInfo.performance?.accuracy && (
+            <div className="stat-card">
+              <span className="stat-label">Precisión</span>
+              <span className="stat-value">
+                {(modelInfo.performance.accuracy * 100).toFixed(2)}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        <details className="model-details">
+          <summary>Información Detallada</summary>
+          <div className="details-grid">
+            {modelInfo.training_info && (
+              <div className="detail-section">
+                <h4>Información de Entrenamiento</h4>
+                <pre>{JSON.stringify(modelInfo.training_info, null, 2)}</pre>
+              </div>
+            )}
+            
+            {modelInfo.architecture && (
+              <div className="detail-section">
+                <h4>Arquitectura</h4>
+                <pre>{JSON.stringify(modelInfo.architecture, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        </details>
+      </div>
+    )}
+
+    {/* Nueva sección: Imágenes de los mejores dinosaurios
+    <div className="section">
+      <h2>Mejores Dinosaurios</h2>
+      <div className="top-dinosaurs-grid">
+        {TOP_DINOSAURS.map((dino) => (
+          <div key={dino.name} className="top-dino-card">
+            <h3>{dino.name}</h3>
+            <button
+              onClick={() => handleGenerateTopImages(dino.name)}
+              disabled={loadingImages[dino.name]}
+              className="button"
+            >
+              {loadingImages[dino.name] ? "Cargando..." : "Generar Imagen"}
+            </button>
+
+            {errorImages[dino.name] && <p className="error">{errorImages[dino.name]}</p>}
+
+            {topImages[dino.name] && (
+              <div className="image-container">
+                <img 
+                  src={`data:image/png;base64,${topImages[dino.name]}`} 
+                  alt={`Imagen de ${dino.name}`} 
+                  className="dino-image" 
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div> */}
+
+    {/* Sección: Top 10 Ejemplos */}
+      <div className="section">
+        <h2>Top 10 Mejores Ejemplos</h2>
+        <div className="top-dinos-grid">
+          {TOP_DINOSAURS.map((dino) => (
+            <div key={dino.name} className="dino-card">
+              <div className="dino-info">
+                <h3>{dino.name}</h3>
+                <div className="dino-stats">
+                  <span className="dino-score">Score: {dino.score}</span>
+                  <span className="dino-temp">Temp: {dino.temp}</span>
+                </div>
+                <button
+                  onClick={() => handleGenerateTopImages(dino.name)}
+                  disabled={loadingImages[dino.name]}
+                  className="button"
+                >
+                  {loadingImages[dino.name] ? "Generando..." : "Generar Imagen"}
+                </button>
+                {errorImages[dino.name] && (
+                  <p className="error">{errorImages[dino.name]}</p>
+                )}
+                {topImages[dino.name] && (
+                  <div className="image-container">
+                    <img
+                      src={`data:image/png;base64,${topImages[dino.name]}`}
+                      alt={`Generated ${dino.name}`}
+                      className="dino-image"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

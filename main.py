@@ -267,7 +267,7 @@ def generate_features(name: str) -> str:
         }
         
         data = {
-            "model": "llama2",  # or your preferred model
+            "model": "gemma3:4b",
             "prompt": prompt,
             "stream": False
         }

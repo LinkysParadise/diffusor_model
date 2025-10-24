@@ -40,3 +40,153 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Model Info Styling */
+.model-info-container {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.model-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.model-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+}
+
+.model-type-badge {
+  background: #4834d4;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.875rem;
+}
+
+.model-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-label {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.stat-value {
+  color: #2c3e50;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.model-details {
+  border-top: 1px solid #dee2e6;
+  padding-top: 20px;
+}
+
+.model-details summary {
+  color: #4834d4;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.detail-section {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.detail-section h4 {
+  color: #2c3e50;
+  margin: 0 0 12px 0;
+}
+
+.detail-section pre {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 4px;
+  overflow: auto;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Top Dinos Styling */
+.top-dinos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+.dino-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.dino-info h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+}
+
+.dino-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dino-score {
+  color: #2ecc71;
+  font-weight: 500;
+}
+
+.dino-temp {
+  color: #7f8c8d;
+}
+
+.dino-card .image-container {
+  margin-top: 1rem;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dino-card .dino-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.dino-card .button {
+  width: 100%;
+  margin-top: 0.5rem;
+}

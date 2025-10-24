@@ -20,6 +20,15 @@ export interface DinosaurImage {
   image_base64: string
 }
 
+export interface ModelInfoResponse {
+  model_name: string;
+  model_type: string;
+  architecture: any;
+  training_info: any;
+  vocabulary: any;
+  performance: any;
+}
+
 /**
  * Llama al endpoint para generar un nombre y descripción de dinosaurio.
  * @returns Una promesa que se resuelve con el nombre y descripción del dinosaurio.
@@ -84,4 +93,16 @@ export const generateDinosaurImage = async (name: string, features:string): Prom
  */
 export const getDinosaurImageStream = (name: string): string => {
   return `${API_BASE}/generate/image/stream/${name}`;
+};
+
+export const getModelInfo = async (): Promise<ModelInfoResponse> => {
+  const response = await fetch(`${API_BASE}/model/info`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error("Error fetching model info.");
+  }
+  return response.json();
 };
