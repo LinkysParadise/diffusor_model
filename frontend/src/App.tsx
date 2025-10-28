@@ -4,8 +4,10 @@ import {
   generateDinosaurImage,
   getDinosaurImageStream,
   getModelInfo,
+  chatWithDinosaur,
   type DinosaurName,
   type ModelInfoResponse,
+  type ChatResponse,
 } from "./api";
 import "./App.css";
 
@@ -45,6 +47,12 @@ function App() {
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>({});
   const [errorImages, setErrorImages] = useState<Record<string, string>>({});
 
+  // Add these new states for chat
+  const [chatMessages, setChatMessages] = useState<Record<string, ChatResponse[]>>({});
+  const [chatInputs, setChatInputs] = useState<Record<string, string>>({});
+  const [loadingChats, setLoadingChats] = useState<Record<string, boolean>>({});
+  const [chatErrors, setChatErrors] = useState<Record<string, string>>({});
+
   /**
    * Maneja la generación automática de un dinosaurio.
    */
@@ -57,8 +65,8 @@ function App() {
     try {
       const nameData = await generateDinosaurName();
       setAutoDinosaur(nameData);
-      
-      const dino =  nameData.dinosaurs[0]
+
+      const dino = nameData.dinosaurs[0]
 
       const imageData = await generateDinosaurImage(dino.name, dino.features);
       setAutoImage(imageData.image_base64);
@@ -113,7 +121,7 @@ function App() {
     setErrorImages(prev => ({ ...prev, [dinoName]: '' }));
 
     try {
-      const imageData = await generateDinosaurImage(dinoName, 
+      const imageData = await generateDinosaurImage(dinoName,
         `A detailed description of a ${dinoName}, a unique dinosaur species`);
       setTopImages(prev => ({
         ...prev,
@@ -126,6 +134,31 @@ function App() {
       }));
     } finally {
       setLoadingImages(prev => ({ ...prev, [dinoName]: false }));
+    }
+  };
+
+  // Add this new function to handle chat
+  const handleChat = async (dinoName: string, features: string) => {
+    const question = chatInputs[dinoName]?.trim();
+    if (!question) return;
+
+    setLoadingChats(prev => ({ ...prev, [dinoName]: true }));
+    setChatErrors(prev => ({ ...prev, [dinoName]: '' }));
+
+    try {
+      const response = await chatWithDinosaur(dinoName, features, question);
+      setChatMessages(prev => ({
+        ...prev,
+        [dinoName]: [...(prev[dinoName] || []), response]
+      }));
+      setChatInputs(prev => ({ ...prev, [dinoName]: '' }));
+    } catch (error) {
+      setChatErrors(prev => ({
+        ...prev,
+        [dinoName]: error instanceof Error ? error.message : "Error in chat"
+      }));
+    } finally {
+      setLoadingChats(prev => ({ ...prev, [dinoName]: false }));
     }
   };
 
@@ -151,14 +184,58 @@ function App() {
           <div className="result">
             <h3>{autoDinosaur.dinosaurs[0].name}</h3>
             <p>{autoDinosaur.dinosaurs[0].features}</p>
+            <div className="chat-section">
+              <h4>Chat con {autoDinosaur.dinosaurs[0].name}</h4>
+              <div className="chat-messages">
+                {chatMessages[autoDinosaur.dinosaurs[0].name]?.map((msg, index) => (
+                  <div key={index} className="chat-message">
+                    <p className="chat-answer">{msg.answer}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="chat-input-container">
+                <input
+                  type="text"
+                  value={chatInputs[autoDinosaur.dinosaurs[0].name] || ''}
+                  onChange={(e) => setChatInputs(prev => ({
+                    ...prev,
+                    [autoDinosaur.dinosaurs[0].name]: e.target.value
+                  }))}
+                  placeholder="Hazle una pregunta..."
+                  className="chat-input"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleChat(
+                        autoDinosaur.dinosaurs[0].name,
+                        autoDinosaur.dinosaurs[0].features
+                      );
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => handleChat(
+                    autoDinosaur.dinosaurs[0].name,
+                    autoDinosaur.dinosaurs[0].features
+                  )}
+                  disabled={loadingChats[autoDinosaur.dinosaurs[0].name]}
+                  className="chat-button"
+                >
+                  {loadingChats[autoDinosaur.dinosaurs[0].name] ? "Enviando..." : "Enviar"}
+                </button>
+              </div>
+              {chatErrors[autoDinosaur.dinosaurs[0].name] && (
+                <p className="error">{chatErrors[autoDinosaur.dinosaurs[0].name]}</p>
+              )}
+            </div>
           </div>
+
         )}
         {autoImage && (
           <div className="image-container">
-            <img 
-              src={`data:image/png;base64,${autoImage}`} 
-              alt="Generated dinosaur" 
-              className="dino-image" 
+            <img
+              src={`data:image/png;base64,${autoImage}`}
+              alt="Generated dinosaur"
+              className="dino-image"
             />
           </div>
         )}
@@ -187,10 +264,10 @@ function App() {
 
         {manualImage && (
           <div className="image-container">
-            <img 
-              src={`data:image/png;base64,${manualImage}`} 
-              alt="Generated dinosaur" 
-              className="dino-image" 
+            <img
+              src={`data:image/png;base64,${manualImage}`}
+              alt="Generated dinosaur"
+              className="dino-image"
             />
           </div>
         )}
@@ -230,63 +307,63 @@ function App() {
         )}
       </div>
       {modelInfo && (
-      <div className="model-info-container">
-        <div className="model-header">
-          <h3>{modelInfo.model_name}</h3>
-          <span className="model-type-badge">{modelInfo.model_type}</span>
-        </div>
+        <div className="model-info-container">
+          <div className="model-header">
+            <h3>{modelInfo.model_name}</h3>
+            <span className="model-type-badge">{modelInfo.model_type}</span>
+          </div>
 
-        <div className="model-stats-grid">
-          {modelInfo.architecture?.total_params && (
-            <div className="stat-card">
-              <span className="stat-label">Total Parámetros</span>
-              <span className="stat-value">
-                {Number(modelInfo.architecture.total_params).toLocaleString()}
-              </span>
-            </div>
-          )}
-          
-          {modelInfo.vocabulary?.size && (
-            <div className="stat-card">
-              <span className="stat-label">Tamaño del Vocabulario</span>
-              <span className="stat-value">
-                {Number(modelInfo.vocabulary.size).toLocaleString()}
-              </span>
-            </div>
-          )}
-
-          {modelInfo.performance?.accuracy && (
-            <div className="stat-card">
-              <span className="stat-label">Precisión</span>
-              <span className="stat-value">
-                {(modelInfo.performance.accuracy * 100).toFixed(2)}%
-              </span>
-            </div>
-          )}
-        </div>
-
-        <details className="model-details">
-          <summary>Información Detallada</summary>
-          <div className="details-grid">
-            {modelInfo.training_info && (
-              <div className="detail-section">
-                <h4>Información de Entrenamiento</h4>
-                <pre>{JSON.stringify(modelInfo.training_info, null, 2)}</pre>
+          <div className="model-stats-grid">
+            {modelInfo.architecture?.total_params && (
+              <div className="stat-card">
+                <span className="stat-label">Total Parámetros</span>
+                <span className="stat-value">
+                  {Number(modelInfo.architecture.total_params).toLocaleString()}
+                </span>
               </div>
             )}
-            
-            {modelInfo.architecture && (
-              <div className="detail-section">
-                <h4>Arquitectura</h4>
-                <pre>{JSON.stringify(modelInfo.architecture, null, 2)}</pre>
+
+            {modelInfo.vocabulary?.size && (
+              <div className="stat-card">
+                <span className="stat-label">Tamaño del Vocabulario</span>
+                <span className="stat-value">
+                  {Number(modelInfo.vocabulary.size).toLocaleString()}
+                </span>
+              </div>
+            )}
+
+            {modelInfo.performance?.accuracy && (
+              <div className="stat-card">
+                <span className="stat-label">Precisión</span>
+                <span className="stat-value">
+                  {(modelInfo.performance.accuracy * 100).toFixed(2)}%
+                </span>
               </div>
             )}
           </div>
-        </details>
-      </div>
-    )}
 
-    {/* Nueva sección: Imágenes de los mejores dinosaurios
+          <details className="model-details">
+            <summary>Información Detallada</summary>
+            <div className="details-grid">
+              {modelInfo.training_info && (
+                <div className="detail-section">
+                  <h4>Información de Entrenamiento</h4>
+                  <pre>{JSON.stringify(modelInfo.training_info, null, 2)}</pre>
+                </div>
+              )}
+
+              {modelInfo.architecture && (
+                <div className="detail-section">
+                  <h4>Arquitectura</h4>
+                  <pre>{JSON.stringify(modelInfo.architecture, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Nueva sección: Imágenes de los mejores dinosaurios
     <div className="section">
       <h2>Mejores Dinosaurios</h2>
       <div className="top-dinosaurs-grid">
@@ -317,7 +394,7 @@ function App() {
       </div>
     </div> */}
 
-    {/* Sección: Top 10 Ejemplos */}
+      {/* Sección: Top 10 Ejemplos */}
       <div className="section">
         <h2>Top 10 Mejores Ejemplos</h2>
         <div className="top-dinos-grid">
@@ -348,6 +425,42 @@ function App() {
                     />
                   </div>
                 )}
+                <div className="chat-section">
+                  <div className="chat-messages">
+                    {chatMessages[dino.name]?.map((msg, index) => (
+                      <div key={index} className="chat-message">
+                        <p className="chat-answer">{msg.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="chat-input-container">
+                    <input
+                      type="text"
+                      value={chatInputs[dino.name] || ''}
+                      onChange={(e) => setChatInputs(prev => ({
+                        ...prev,
+                        [dino.name]: e.target.value
+                      }))}
+                      placeholder="Hazle una pregunta..."
+                      className="chat-input"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleChat(dino.name, `A ${dino.name} is a unique dinosaur species`);
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => handleChat(dino.name, `A ${dino.name} is a unique dinosaur species`)}
+                      disabled={loadingChats[dino.name]}
+                      className="chat-button"
+                    >
+                      {loadingChats[dino.name] ? "Enviando..." : "Enviar"}
+                    </button>
+                  </div>
+                  {chatErrors[dino.name] && (
+                    <p className="error">{chatErrors[dino.name]}</p>
+                  )}
+                </div>
               </div>
             </div>
           ))}

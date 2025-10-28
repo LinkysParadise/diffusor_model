@@ -106,3 +106,42 @@ export const getModelInfo = async (): Promise<ModelInfoResponse> => {
   }
   return response.json();
 };
+
+
+// Add these interfaces
+export interface ChatRequest {
+  dinosaur_name: string;
+  features: string;
+  question: string;
+}
+
+export interface ChatResponse {
+  success: boolean;
+  dinosaur_name: string;
+  answer: string;
+  timestamp: string;
+}
+
+// Add this function
+export const chatWithDinosaur = async (
+  name: string,
+  features: string,
+  question: string
+): Promise<ChatResponse> => {
+  const response = await fetch(`${API_BASE}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      dinosaur_name: name,
+      features: features,
+      question: question,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Error chatting with dinosaur");
+  }
+  return response.json();
+};

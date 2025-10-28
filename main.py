@@ -16,6 +16,11 @@ import logging
 from datetime import datetime
 import os
 import requests
+from langchain_core.prompts import PromptTemplate
+from langchain_ollama import OllamaLLM
+from langchain_core.output_parsers import StrOutputParser
+from pydantic import BaseModel, Field
+
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -94,6 +99,17 @@ class HealthResponse(BaseModel):
     rnn_model_loaded: bool
     diffusion_model_loaded: bool
     device: str
+    timestamp: str
+
+class ChatRequest(BaseModel):
+    dinosaur_name: str
+    features: str
+    question: str = Field(..., description="Question to ask about the dinosaur")
+
+class ChatResponse(BaseModel):
+    success: bool
+    dinosaur_name: str
+    answer: str
     timestamp: str
 
 # ============================================================================
@@ -267,7 +283,7 @@ def generate_features(name: str) -> str:
         }
         
         data = {
-            "model": "gemma3:4b",
+            "model": "llama2",
             "prompt": prompt,
             "stream": False
         }
@@ -554,6 +570,54 @@ async def generate_image(request: ImageGenerationRequest):
     except Exception as e:
         logger.error(f"Error generando imagen: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat_with_dinosaur(request: ChatRequest):
+    """Permite chatear con un dinosaurio específico usando sus características"""
+    try:
+        # Initialize Ollama LLM
+        llm = OllamaLLM(
+            base_url="https://muffy-nolan-postnasal.ngrok-free.dev/api",
+            model="llama2"
+        )
+
+        # Create prompt template
+        chat_template = PromptTemplate(
+            input_variables=["name", "features", "question"],
+            template="""You are {name}, a dinosaur with these characteristics: {features}.
+            Answer the following question as if you were this dinosaur, in first person.
+            Keep the answer concise (2-3 sentences) and relevant to your characteristics.
+            
+            Question: {question}
+            
+            Answer:"""
+        )
+
+        # Create LLMChain
+        chain = chat_template | llm | StrOutputParser()
+
+        # Generate response
+        response = chain.invoke({
+            "name": request.dinosaur_name,
+            "features": request.features,
+            "question": request.question
+        })
+
+        return ChatResponse(
+            success=True,
+            dinosaur_name=request.dinosaur_name,
+            answer=response.strip(),
+            timestamp=datetime.now().isoformat()
+        )
+
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating chat response: {str(e)}"
+        )
 
 @app.get("/generate/image/stream/{dinosaur_name}")
 async def generate_image_stream(
