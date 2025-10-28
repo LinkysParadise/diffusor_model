@@ -579,7 +579,7 @@ async def chat_with_dinosaur(request: ChatRequest):
     try:
         # Initialize Ollama LLM
         llm = OllamaLLM(
-            base_url="https://muffy-nolan-postnasal.ngrok-free.dev/api",
+            base_url="https://muffy-nolan-postnasal.ngrok-free.dev",
             model="llama2"
         )
 
@@ -681,4 +681,4 @@ if __name__ == "__main__":
         port=8000,
         reload=True,  # Auto-reload en desarrollo
         log_level="info"
-    )
+    )   
