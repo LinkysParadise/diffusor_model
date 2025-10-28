@@ -48,7 +48,12 @@ function App() {
   const [errorImages, setErrorImages] = useState<Record<string, string>>({});
 
   // Add these new states for chat
-  const [chatMessages, setChatMessages] = useState<Record<string, ChatResponse[]>>({});
+  interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+  }
+
+  const [chatHistory, setChatHistory] = useState<Record<string, ChatMessage[]>>({});
   const [chatInputs, setChatInputs] = useState<Record<string, string>>({});
   const [loadingChats, setLoadingChats] = useState<Record<string, boolean>>({});
   const [chatErrors, setChatErrors] = useState<Record<string, string>>({});
@@ -146,10 +151,17 @@ function App() {
     setChatErrors(prev => ({ ...prev, [dinoName]: '' }));
 
     try {
-      const response = await chatWithDinosaur(dinoName, features, question);
-      setChatMessages(prev => ({
+      const currentHistory = chatHistory[dinoName] || [];
+      const response = await chatWithDinosaur(
+        dinoName,
+        features,
+        question,
+        currentHistory
+      );
+      
+      setChatHistory(prev => ({
         ...prev,
-        [dinoName]: [...(prev[dinoName] || []), response]
+        [dinoName]: response.history
       }));
       setChatInputs(prev => ({ ...prev, [dinoName]: '' }));
     } catch (error) {
@@ -187,9 +199,9 @@ function App() {
             <div className="chat-section">
               <h4>Chat con {autoDinosaur.dinosaurs[0].name}</h4>
               <div className="chat-messages">
-                {chatMessages[autoDinosaur.dinosaurs[0].name]?.map((msg, index) => (
-                  <div key={index} className="chat-message">
-                    <p className="chat-answer">{msg.answer}</p>
+                {chatHistory[autoDinosaur.dinosaurs[0].name]?.map((msg, index) => (
+                  <div key={index} className={`chat-message ${msg.role}`}>
+                    <p className="chat-text">{msg.content}</p>
                   </div>
                 ))}
               </div>
@@ -427,9 +439,9 @@ function App() {
                 )}
                 <div className="chat-section">
                   <div className="chat-messages">
-                    {chatMessages[dino.name]?.map((msg, index) => (
-                      <div key={index} className="chat-message">
-                        <p className="chat-answer">{msg.answer}</p>
+                    {chatHistory[dino.name]?.map((msg, index) => (
+                      <div key={index} className={`chat-message ${msg.role}`}>
+                        <p className="chat-text">{msg.content}</p>
                       </div>
                     ))}
                   </div>

@@ -109,16 +109,22 @@ export const getModelInfo = async (): Promise<ModelInfoResponse> => {
 
 
 // Add these interfaces
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface ChatRequest {
   dinosaur_name: string;
   features: string;
-  question: string;
+  history?: ChatMessage[];
+  question?: string;
 }
 
 export interface ChatResponse {
   success: boolean;
   dinosaur_name: string;
-  answer: string;
+  history: ChatMessage[];
   timestamp: string;
 }
 
@@ -126,7 +132,8 @@ export interface ChatResponse {
 export const chatWithDinosaur = async (
   name: string,
   features: string,
-  question: string
+  question: string,
+  history?: ChatMessage[]
 ): Promise<ChatResponse> => {
   const response = await fetch(`${API_BASE}/chat`, {
     method: "POST",
@@ -136,7 +143,8 @@ export const chatWithDinosaur = async (
     body: JSON.stringify({
       dinosaur_name: name,
       features: features,
-      question: question,
+      question,
+      history
     }),
   });
 

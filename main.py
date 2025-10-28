@@ -104,12 +104,16 @@ class HealthResponse(BaseModel):
 class ChatRequest(BaseModel):
     dinosaur_name: str
     features: str
-    question: str = Field(..., description="Question to ask about the dinosaur")
+    # Optional conversation history (list of messages). Each message has a role and content.
+    history: Optional[List[Dict[str, str]]] = Field(default=None, description="Conversation history as list of {role, content}")
+    # If provided, a new user message to append to the history. Either 'question' or 'history' should be provided.
+    question: Optional[str] = Field(default=None, description="Optional new user question to append to history")
 
 class ChatResponse(BaseModel):
     success: bool
     dinosaur_name: str
-    answer: str
+    # Full conversation history after the model reply
+    history: List[Dict[str, str]]
     timestamp: str
 
 # ============================================================================
@@ -583,32 +587,44 @@ async def chat_with_dinosaur(request: ChatRequest):
             model="llama2"
         )
 
-        # Create prompt template
-        chat_template = PromptTemplate(
-            input_variables=["name", "features", "question"],
-            template="""You are {name}, a dinosaur with these characteristics: {features}.
-            Answer the following question as if you were this dinosaur, in first person.
-            Keep the answer concise (2-3 sentences) and relevant to your characteristics.
-            
-            Question: {question}
-            
-            Answer:"""
+        # Build conversation history: start with provided history or empty
+        history: List[Dict[str, str]] = request.history[:] if request.history else []
+
+        # If a new question was provided, append it as a user message
+        if request.question:
+            history.append({"role": "user", "content": request.question})
+
+        # Construct a single prompt that includes the dinosaur profile and the prior conversation
+        profile_header = (
+            f"You are {request.dinosaur_name}, a dinosaur with these characteristics: {request.features}. "
+            "Respond as this character in first person, concise (2-3 sentences).\n\n"
         )
 
-        # Create LLMChain
-        chain = chat_template | llm | StrOutputParser()
+        # Append prior messages into the prompt
+        convo_lines = []
+        for msg in history:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            # Normalize role labels
+            speaker = "User" if role == "user" else "Assistant"
+            convo_lines.append(f"{speaker}: {content}")
 
-        # Generate response
-        response = chain.invoke({
-            "name": request.dinosaur_name,
-            "features": request.features,
-            "question": request.question
-        })
+        # Ask the model to produce the assistant reply
+        full_prompt = profile_header + "\n".join(convo_lines) + "\nAssistant:"
+
+        # Call Ollama asynchronously
+        llm_response = await llm.ainvoke(full_prompt)
+
+        # llm.ainvoke may return a string or dict depending on implementation
+        assistant_text = llm_response if isinstance(llm_response, str) else str(llm_response)
+
+        # Append assistant reply to history
+        history.append({"role": "assistant", "content": assistant_text.strip()})
 
         return ChatResponse(
             success=True,
             dinosaur_name=request.dinosaur_name,
-            answer=response.strip(),
+            history=history,
             timestamp=datetime.now().isoformat()
         )
 
